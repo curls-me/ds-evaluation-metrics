@@ -1,0 +1,14 @@
+[project]
+name = "ds-evaluation-metrics"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.10.9",
+    "pandas>=3.0.3",
+    "scikit-learn>=1.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]
