@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', function(){ hljs.highlightAll(); });</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluation Metrics &mdash; neue fische / SPICED</title>
+<style>
+  :root{
+    --orange:#F5821F;
+    --ink:#1A1A1A;
+    --muted:#7a7a7a;
+    --bg:#ffffff;
+    --rule:#e3e3e3;
+    --side:240px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);
+    overflow:hidden;
+  }
+
+  /* deck + slides */
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;left:var(--side);
+    display:flex;flex-direction:column;justify-content:safe center;
+    padding:78px 6vw 60px;
+    opacity:0;visibility:hidden;overflow-y:auto;
+    transition:opacity .35s ease;
+  }
+  .slide.active{opacity:1;visibility:visible}
+  .inner{max-width:880px;width:100%;margin:0 auto}
+
+  /* type */
+  .movelabel{color:var(--orange);font-size:.95rem;font-weight:400;margin:0 0 .6rem;letter-spacing:.01em}
+  h1.title{font-size:2.5rem;line-height:1.12;font-weight:800;margin:0 0 1.4rem}
+  p.lead{font-size:1.22rem;line-height:1.5;margin:.22rem 0}
+  p.closer{font-size:1.18rem;line-height:1.5;margin:1.3rem 0 0}
+  .term{color:var(--orange);font-weight:700}
+  em{font-style:italic}
+  code{background:#f1f1f1;border-radius:5px;padding:1px 6px;font-size:.92em}
+  pre{background:#fff;color:#1A1A1A;border:1px solid var(--rule);padding:14px 18px;
+    border-radius:10px;overflow:auto;font-size:1rem;line-height:1.45;margin:1.1rem 0 0}
+  pre code.hljs{background:transparent;color:inherit;padding:0}
+
+  /* bullets: orange marker, black text */
+  ul.bullets{list-style:none;padding:0;margin:1.1rem 0 0}
+  ul.bullets li{position:relative;padding-left:1.4rem;margin:.5rem 0;font-size:1.22rem;line-height:1.5}
+  ul.bullets li::before{content:"•";color:var(--orange);position:absolute;left:0;font-size:1.2em;line-height:1.4}
+  /* action bullets: orange marker + orange text */
+  ul.bullets.action li{color:var(--orange)}
+
+  /* glossary */
+  .glossary{columns:2;column-gap:2.6rem;margin:1rem 0 0}
+  .glossary p{break-inside:avoid;margin:.3rem 0;font-size:.98rem;line-height:1.4}
+
+  /* quiz */
+  .quiz{margin:1rem 0 0}
+  .q{margin:0 0 1.05rem}
+  .q .qq{font-size:1.06rem;font-weight:600;margin:0 0 .45rem;color:var(--ink)}
+  .opts{display:flex;flex-direction:column;gap:.38rem}
+  .opt{display:block;width:100%;text-align:left;border:1.5px solid var(--rule);border-radius:8px;
+    padding:.48rem .85rem;background:#fff;cursor:pointer;font-size:.97rem;font-family:inherit;
+    color:var(--ink);transition:border-color .15s,background .15s}
+  .opt:hover{border-color:var(--orange)}
+  .opt.correct{border-color:#2e9e5b;background:#eafaf0;color:#1d6b3e}
+  .opt.wrong{border-color:#d23f3f;background:#fcecec;color:#a12727}
+  .fb{font-size:.9rem;color:var(--muted);margin:.4rem 0 0;min-height:1.1em}
+
+  /* simple inline diagrams (boxes, flows, mini tables) */
+  .diagram{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin:1.2rem 0}
+  .dbox{border:2px solid var(--orange);border-radius:10px;background:#fff;padding:.7rem 1rem;min-width:110px;text-align:center}
+  .dbox .t{font-weight:700;color:var(--ink)}
+  .dbox .s{font-size:.82rem;color:var(--muted);margin-top:.25rem}
+  .minitable{border-collapse:collapse;margin:.5rem 1.2rem .5rem 0;font-size:.95rem}
+  .minitable caption{caption-side:top;text-align:left;color:var(--muted);font-size:.82rem;margin-bottom:.25rem}
+  .minitable th,.minitable td{border:1px solid var(--rule);padding:.25rem .6rem;text-align:left}
+  .minitable th{background:#faf2ea;color:var(--ink);font-weight:600}
+  /* wide variant: a full-width data snapshot showing every column */
+  .minitable.wide{width:100%;margin-right:0;font-size:.8rem;table-layout:fixed}
+  .minitable.wide th,.minitable.wide td{padding:.22rem .3rem;text-align:center}
+  /* large variant: the confusion matrix, readable from the back of the room */
+  .minitable.cm{width:100%;margin-right:0;font-size:1.15rem}
+  .minitable.cm th,.minitable.cm td{padding:.65rem .9rem;text-align:center}
+  .minitable.cm th:first-child{text-align:right}
+  /* cases variant: a wider table whose last columns carry prose */
+  .minitable.cases{width:100%;margin-right:0;font-size:.86rem}
+  .minitable.cases th,.minitable.cases td{padding:.3rem .55rem;vertical-align:top}
+  /* container box (shows one thing holding others, e.g. a flow holding tasks) */
+  /* comparison separator: put <span class="vs">vs</span> between two boxes */
+  .vs{color:var(--muted);font-weight:700;font-size:1rem;letter-spacing:.08em;align-self:center}
+
+  /* reveal animation */
+  .reveal{opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease}
+  .reveal.shown{opacity:1;transform:none}
+
+  /* chrome */
+  .progress{position:fixed;left:0;bottom:0;height:4px;background:var(--orange);width:0;transition:width .3s ease;z-index:5}
+  .counter{position:fixed;right:18px;bottom:14px;color:var(--muted);font-size:.85rem}
+  .hint{position:fixed;left:calc(var(--side) + 18px);bottom:12px;color:var(--muted);font-size:.82rem}
+  .brandbar{position:fixed;top:0;left:var(--side);right:0;display:flex;justify-content:space-between;
+    align-items:center;height:56px;padding:0 6vw;background:#fff;border-bottom:1px solid var(--rule);
+    color:var(--ink);font-weight:700;font-size:.95rem;letter-spacing:.02em;z-index:6}
+  .brandbar .nf{color:var(--ink)}
+
+  /* sidebar progression */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--side);
+    padding:78px 18px 28px;border-right:1px solid var(--rule);background:#fff;
+    display:flex;flex-direction:column;gap:0;overflow:auto;z-index:4}
+  .sidebar .side-h{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 .8rem .1rem}
+  .navitem{display:flex;align-items:center;gap:.6rem;width:100%;border:none;background:none;
+    text-align:left;cursor:pointer;font-size:.82rem;line-height:1.2;color:var(--muted);
+    padding:.42rem .2rem;font-family:inherit}
+  .navitem .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--rule);
+    flex:0 0 auto;transition:background .2s,border-color .2s,opacity .2s}
+  .navitem:hover{color:var(--ink)}
+  .navitem.done{color:var(--ink)}
+  .navitem.done .dot{background:var(--orange);border-color:var(--orange);opacity:.35}
+  .navitem.active{color:var(--orange);font-weight:600}
+  .navitem.active .dot{background:var(--orange);border-color:var(--orange);opacity:1}
+
+  /* equations & notation — .eq and its .symbols line reveal together as ONE step */
+  .eq{text-align:center;margin:1.1rem 0 .1rem}
+  .eq code{background:#f6f6f6;font-size:1.22rem;padding:.35rem .8rem;display:inline-block}
+  .symbols{font-size:.86rem;color:var(--muted);text-align:center;margin:.3rem 0 0;line-height:1.5}
+  .note{font-size:.92rem;color:var(--muted);line-height:1.45;margin:.9rem 0 0}
+  /* also used as a one-line caption under a chart */
+
+  /* charts — Chart.js loads from the jsDelivr CDN in the head, after the stylesheet.
+     Each chart carries its height on its own .chart-wrap div (150-280px). */
+  .chart-wrap{margin:1.2rem 0 0;position:relative}
+
+  @media (max-width:640px){
+    :root{--side:0px}
+    .sidebar{display:none}
+    .hint{left:18px}
+    h1.title{font-size:1.9rem}
+    p.lead,ul.bullets li{font-size:1.05rem}
+    .glossary{columns:1}
+    .slide{padding:9vh 7vw}
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="brandbar"><span class="nf">&#8811; neue fische</span><span>SPICED</span></div>
+
+<nav class="sidebar" id="sidebar"><p class="side-h">Your progress</p></nav>
+
+<div class="deck" id="deck">
+
+  <!-- ===================== 1 · START ===================== -->
+  <section class="slide" data-nav="Start">
+    <div class="inner">
+      <p class="movelabel">Module 2 &middot; Lecture 4 &middot; Supervised Machine Learning</p>
+      <h1 class="title">Is A Model Actually Any Good and Why?</h1>
+      <p class="lead">So far, you have fitted some models and given them a score.</p>
+      <p class="lead">Today you learn which score to use and trust. More importantly, when a good score is hiding a useless model.</p>
+      <ul class="bullets">
+        <li><code>&rarr;</code> or <code>Space</code> &mdash; next point</li>
+        <li><code>&larr;</code> &mdash; back &middot; <code>Home</code> / <code>End</code> &mdash; jump</li>
+        <li>The sidebar tracks where you are</li>
+      </ul>
+      <p class="closer">Ready? Press <code>&rarr;</code> to begin.
+        <span style="color:#7a7a7a;font-size:.9rem">Deck built 2026-09-21.</span></p>
+    </div>
+  </section>
+
+  <!-- ===================== 2 · RECAP ===================== -->
+  <section class="slide" data-nav="What do you know?">
+    <div class="inner">
+      <p class="movelabel">Thinking Time!</p>
+      <h1 class="title">What do you know?</h1>
+      <p class="lead">You have fitted a model that forecasts rain from temperature, humidity and wind speed.</p>
+      <p class="lead">It runs. It can make predictions. But you ask yourself, <em>&ldquo;is it any good?&rdquo;</em></p>
+      <ul class="bullets action reveal" data-step="2">
+        <li>What is a good model and how can you measure it?</li>
+      </ul>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">Your model&rsquo;s accuracy is 90%. Is that good?</li>
+        <li class="reveal" data-step="4">Your model forecasts &ldquo;no rain&rdquo; in a desert. It is correct 99% of the time. Is that a good weather model?</li>
+        <li class="reveal" data-step="5">How do you or your model know which mistakes are more costly?</li>
+      </ul>
+      <p class="closer reveal" data-step="6">Fitting a model can be done quickly and easily. Grading it is the hard part.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 3 · OBJECTIVES ===================== -->
+  <section class="slide" data-nav="What we will learn">
+    <div class="inner">
+      <p class="movelabel">What we will learn</p>
+      <h1 class="title">Nine Metrics, One Question</h1>
+      <p class="lead">Every metric provides a means for us to evaluate a model. We need to choose the right one for our specific use case.</p>
+      <ul class="bullets action">
+        <li class="reveal" data-step="1">Build a <span class="term">confusion matrix</span> for classification tasks</li>
+        <li class="reveal" data-step="2">Show how <span class="term">accuracy</span> can be deceiving</li>
+        <li class="reveal" data-step="3">Fit a <span class="term">baseline</span> model before you trust any other model score</li>
+        <li class="reveal" data-step="4">Discuss how <span class="term">recall</span> relates to <span class="term">precision</span> and how they can be traded off</li>
+        <li class="reveal" data-step="5">Look at the <span class="term">F1</span> score and sweep decision thresholds</li>
+        <li class="reveal" data-step="6">Revise our understanding of: <span class="term">MSE, RMSE, MAE and R&sup2;</span></li>
+      </ul>
+      <p class="closer reveal" data-step="7">Let&rsquo;s go back to the wine dataset.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 4 · DATASET ===================== -->
+  <section class="slide" data-nav="The Wine Dataset">
+    <div class="inner">
+      <p class="movelabel">Our Data</p>
+      <h1 class="title">4,898 Bottles of White On The Wall&hellip;</h1>
+      <p class="lead">Eleven physical measurements per bottle, plus a tasting panel&rsquo;s quality score from 3 to 9.</p>
+      <table class="minitable wide reveal" data-step="1">
+        <caption>wine-quality.csv &mdash; the first four bottles, all eleven features and the target</caption>
+        <tr><th>fixed<br>acidity</th><th>volatile<br>acidity</th><th>citric<br>acid</th><th>residual<br>sugar</th><th>chlorides</th><th>free<br>sulfur<br>dioxide</th><th>total<br>sulfur<br>dioxide</th><th>density</th><th>pH</th><th>sulphates</th><th>alcohol</th><th>quality</th></tr>
+        <tr><td>7.0</td><td>0.27</td><td>0.36</td><td>20.7</td><td>0.045</td><td>45</td><td>170</td><td>1.001</td><td>3.00</td><td>0.45</td><td>8.8</td><td>6</td></tr>
+        <tr><td>6.3</td><td>0.30</td><td>0.34</td><td>1.6</td><td>0.049</td><td>14</td><td>132</td><td>0.994</td><td>3.30</td><td>0.49</td><td>9.5</td><td>6</td></tr>
+        <tr><td>8.1</td><td>0.28</td><td>0.40</td><td>6.9</td><td>0.050</td><td>30</td><td>97</td><td>0.995</td><td>3.26</td><td>0.44</td><td>10.1</td><td>6</td></tr>
+        <tr><td>7.2</td><td>0.23</td><td>0.32</td><td>8.5</td><td>0.058</td><td>47</td><td>186</td><td>0.996</td><td>3.19</td><td>0.40</td><td>9.9</td><td>6</td></tr>
+      </table>
+      <p class="symbols reveal" data-step="2">Eleven columns of chemistry &middot; one column, <code>quality</code>, scored by people. That last column is the only thing we are trying to predict.</p>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">A wine is <span class="term">good</span> when <code>quality &gt;= 7</code>.</li>
+        <li class="reveal" data-step="4">Calculated, that is <strong>1,060</strong> bottles out of <strong>3,838</strong> = <strong>21.6%</strong></li>
+        <li class="reveal" data-step="5">Keep that 21.6% in your head, it&rsquo;s important later.</li>
+      </ul>
+      <ul class="bullets action reveal" data-step="6">
+        <li>We now have a classification problem. Good &gt;= 7, Regular &lt; 7: if you guessed &ldquo;regular&rdquo; for every bottle, how accurate would you be? Put a number in the chat.</li>
+      </ul>
+      <p class="closer reveal" data-step="7">Let&rsquo;s look more closely at classification problems.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 5 · TASK TYPE ===================== -->
+  <section class="slide" data-nav="A Number Or A Category?">
+    <div class="inner">
+      <p class="movelabel">Both regression problems, just different targets</p>
+      <h1 class="title">A Number Or A Category?</h1>
+      <p class="lead">The metric you reach for is decided before you fit any model, by the shape of what you are predicting.</p>
+      <div class="diagram reveal" data-step="1">
+        <div class="dbox"><div class="t">Classification</div><div class="s"><code>y = quality &gt;= 7</code><br>good / ordinary</div></div>
+        <div class="vs">VS</div>
+        <div class="dbox"><div class="t">Regression</div><div class="s"><code>y = alcohol</code><br>8.0 - 14.0 % ABV</div></div>
+      </div>
+      <ul class="bullets">
+        <li class="reveal" data-step="2">A classification problem is either <em>right or wrong</em>, <em>yes or no</em>, <em>true or false</em>, <em>1 or 0</em> and we score it four ways.</li>
+        <li class="reveal" data-step="3">A regression problem is <em>off by some amount</em>, so we measure the size of the miss (the error).</li>
+        <li class="reveal" data-step="4">The type of problem determines the appropriate evaluation metrics.</li>
+      </ul>
+      <p class="closer reveal" data-step="5">Categories first.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 6 · CONFUSION MATRIX ===================== -->
+  <section class="slide" data-nav="The Confusion Matrix">
+    <div class="inner">
+      <p class="movelabel">The Confusion Matrix</p>
+      <h1 class="title">Four Ways To Be Right Or Wrong</h1>
+      <p class="lead">Every prediction a classifier makes lands in exactly one of four quarters.</p>
+      <table class="minitable cm reveal" data-step="1">
+        <caption>Rows are the truth &middot; columns are the prediction</caption>
+        <tr><th></th><th>predicted ordinary</th><th>predicted good</th></tr>
+        <tr><th>actually ordinary</th><td>TN &mdash; True Negative</td><td>FP &mdash; False Positive</td></tr>
+        <tr><th>actually good</th><td>FN &mdash; False Negative</td><td>TP &mdash; True Positive</td></tr>
+      </table>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import confusion_matrix
+from sklearn.linear_model import LogisticRegression
+
+model = LogisticRegression(max_iter=1000) # classifier. We cover this on Monday
+model.fit(X_train, y_train)               # 3,673 training bottles
+y_pred = model.predict(X_test)            # 1,225 held-out bottles
+print(confusion_matrix(y_test, y_pred))
+
+# [[912,  48],   &middot; 912 ordinary wines called ordinary, 48 called good
+# [188,  77]]    &middot; 188 good wines MISSED, 77 good ones found</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">sklearn orders the confusion matrix as <code>[[TN, FP], [FN, TP]]</code> &mdash; truth down the side, prediction across the top.</li>
+        <li class="reveal" data-step="4">The mistake everyone makes once: <span class="term">reading it transposed</span>. Most textbooks, and plenty of blog posts, draw it the other way round &mdash; prediction down the side, truth across the top.</li>
+        <li class="reveal" data-step="5">Read it mirrored and the 48 false positives become 48 false negatives. Precision and recall then swap places, and every conclusion you draw from them is backwards.</li>
+        <li class="reveal" data-step="6">So check one cell you can reason about before trusting the other three. Most wines are ordinary and the model mostly says ordinary, so the largest count has to sit top-left: <strong>912</strong> confirms that the rows really are the truth.</li>
+        <li class="reveal" data-step="7"><strong>FN = 188</strong>. The model missed 188 of the 265 good wines in the test set = 71%.</li>
+      </ul>
+      <p class="closer reveal" data-step="8">Four numbers &mdash; let&rsquo;s see how we can use them.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 7 · ACCURACY + BASELINE ===================== -->
+  <section class="slide" data-nav="Accuracy">
+    <div class="inner">
+      <p class="movelabel">Accuracy</p>
+      <h1 class="title">80.7% Accurate Can Be Deceiving</h1>
+      <p class="lead">Accuracy is the obvious metric for every prediction. How accurate is our model &mdash; how many did we get right?</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>Accuracy = (TP + TN) / (TP + FP + TN + FN)</code></div>
+        <p class="symbols">TP true positive &middot; TN true negative &middot; FP false positive &middot; FN false negative</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import accuracy_score
+
+accuracy_score(y_test, y_pred)   # 0.807 strong start!</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">80.7% correct. Would you use it?</li>
+      </ul>
+      <p class="lead reveal" data-step="4">Now fit the dumbest model that could possibly work.</p>
+      <pre class="reveal" data-step="5"><code class="language-python">from sklearn.dummy import DummyClassifier
+
+baseline = DummyClassifier(strategy="most_frequent")   # always says "ordinary" wine
+baseline.fit(X_train, y_train)
+baseline.score(X_test, y_test)   # 0.784 - it never looks at the features</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="6">A model that ignores every feature scores <strong>0.784</strong>. Ours scores <strong>0.807</strong>.</li>
+        <li class="reveal" data-step="7">All that work bought <strong>2.3 percentage points</strong>. This is the <span class="term">accuracy paradox</span>: when one class dominates, accuracy mostly measures the class imbalance.</li>
+        <li class="reveal" data-step="8">Fit a <span class="term">baseline model</span> <em>first</em>. A score means nothing until you know what you could get for free.</li>
+      </ul>
+      <p class="closer reveal" data-step="9">The model found only 77 of the 265 good wines &mdash; we need a different metric that captures this.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 8 · RECALL ===================== -->
+  <section class="slide" data-nav="Recall">
+    <div class="inner">
+      <p class="movelabel">Recall</p>
+      <h1 class="title">How Many Good Wines Did We Catch?</h1>
+      <p class="lead">Recall ignores the majority class entirely. It asks: &ldquo;of everything that was labelled <em>good</em>, what fraction did we find?&rdquo;</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>Recall = TP / (TP + FN)</code></div>
+        <p class="symbols">TP true positive &middot; FN false negative &mdash; the positives we missed</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import recall_score
+
+recall_score(y_test, y_pred)   # 0.291 - 77 found / 265 actually good</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">Accuracy said 0.807. Recall says <strong>0.291</strong>. Same model, same predictions, different perspectives.</li>
+        <li class="reveal" data-step="4">The model missed <strong>71%</strong> of the good bottles. Accuracy never showed you that, because it was drowned out by the majority &ldquo;ordinary&rdquo; wine class.</li>
+        <li class="reveal" data-step="5">Recall is also called <em>sensitivity</em>, or the <em>true positive rate</em>.</li>
+      </ul>
+      <p class="closer reveal" data-step="6">Recall is easy to trick, though: label every bottle good and recall hits 1.0. We need the other side of the story.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 9 · PRECISION ===================== -->
+  <section class="slide" data-nav="Precision">
+    <div class="inner">
+      <p class="movelabel">Precision</p>
+      <h1 class="title">When We Said Good, Were We Right?</h1>
+      <p class="lead">Precision looks only at the predictions you act on. Of every wine flagged good, what fraction really was?</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>Precision = TP / (TP + FP)</code></div>
+        <p class="symbols">TP true positive &middot; FP false positive &mdash; the false alarms</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import precision_score
+
+precision_score(y_test, y_pred)   # 0.616 - 77 correct / 125 flagged good</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">The model flagged 125 bottles. 77 were genuinely good, 48 were not.</li>
+        <li class="reveal" data-step="4">Recall counts what you <em>missed</em> (FN). Precision counts what you <em>falsely raised</em> (FP).</li>
+      </ul>
+      <p class="lead reveal" data-step="5">Which mistake is more costly? Which metric is better suited?</p>
+      <ul class="bullets action">
+        <li class="reveal" data-step="6">Cancer screening &mdash; miss a tumour, or scare a healthy patient?</li>
+        <li class="reveal" data-step="7">Spam filter &mdash; let junk emails through, or bin a real invoice?</li>
+      </ul>
+      <p class="closer reveal" data-step="8">You can trade one for the other without refitting your model.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 10 · THRESHOLD ===================== -->
+  <section class="slide" data-nav="The Threshold Dial">
+    <div class="inner">
+      <p class="movelabel">The Threshold Dial</p>
+      <h1 class="title">Dial in on Your Preferences</h1>
+      <p class="lead">A classifier does not output a class. It outputs a probability, and a threshold turns that probability into a &ldquo;yes&rdquo; or a &ldquo;no&rdquo; &mdash; typically at 0.50.</p>
+      <p class="lead">Anything above the threshold is classified as &ldquo;yes&rdquo;; anything below is classified as &ldquo;no&rdquo;.</p>
+      <pre class="reveal" data-step="1"><code class="language-python">proba = model.predict_proba(X_test)[:, 1]   # column 1 = P(good)
+y_pred_050 = (proba &gt;= 0.50).astype(int)    # the default
+y_pred_030 = (proba &gt;= 0.30).astype(int)    # more willing to say the wine is "good"</code></pre>
+      <div class="chart-wrap reveal" data-step="2" style="height:230px">
+        <canvas id="chartThreshold"></canvas>
+      </div>
+      <p class="symbols reveal" data-step="3">Every threshold from 0.05 to 0.75 on the 1,225 test bottles. Orange = precision | Blue = recall.</p>
+      <table class="minitable reveal" data-step="4">
+        <caption>The same model, two thresholds &mdash; nothing was refitted</caption>
+        <tr><th>threshold</th><th>precision</th><th>recall</th><th>F1</th></tr>
+        <tr><td>0.50</td><td>0.616</td><td>0.291</td><td>0.395</td></tr>
+        <tr><td>0.30</td><td>0.523</td><td>0.654</td><td>0.584</td></tr>
+      </table>
+      <ul class="bullets">
+        <li class="reveal" data-step="5">The closer the score is to 1, the better. Dropping the threshold to 0.30 lifts recall from 0.291 to <strong>0.654</strong>, but it costs precision: 0.616 down to 0.523.</li>
+        <li class="reveal" data-step="6">The curves cross over at 0.36. There is no setting where both are high; that is the trade-off, not a bug.</li>
+      </ul>
+      <p class="closer reveal" data-step="7">0.50 is a default threshold, not a law. Pick it from which mistake costs you more.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 11 · F1 ===================== -->
+  <section class="slide" data-nav="F1-score">
+    <div class="inner">
+      <p class="movelabel">F1-score</p>
+      <h1 class="title">One Number That Balances Precision and Recall</h1>
+      <p class="lead">When you must rank models on a single score but refuse to ignore either error, combine them.</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>F1 = 2 &middot; (Precision &middot; Recall) / (Precision + Recall)</code></div>
+        <p class="symbols">Precision fraction of flagged positives that were right &middot; Recall fraction of real positives that were found</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import f1_score
+
+f1_score(y_test, y_pred)   # 0.395 - at the default 0.50 threshold</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">F1 is the <span class="term">harmonic mean</span>, not the ordinary mean. The plain mean of 0.616 and 0.291 would be 0.454.</li>
+        <li class="reveal" data-step="4">The harmonic mean is dragged toward the <em>smaller</em> of the two values, so one terrible score cannot be outweighed by an excellent one.</li>
+        <li class="reveal" data-step="5">Precision = 1.0 and Recall = 0.0 makes F1 = 0.0. Exactly the behaviour you want from a summary of the two metrics.</li>
+      </ul>
+      <p class="closer reveal" data-step="6">F1 judges one threshold. Next, we judge every threshold at once&hellip;</p>
+    </div>
+  </section>
+
+  <!-- ===================== 12 · ROC / AUC ===================== -->
+  <section class="slide" data-nav="ROC and AUC">
+    <div class="inner">
+      <p class="movelabel">ROC and AUC</p>
+      <h1 class="title">Receiver Operating Characteristic (ROC) Curve</h1>
+      <p class="lead">Sweeping the thresholds from 0 to 1, plot the false positive rate against recall and you get a ROC curve.</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>FPR = FP / (FP + TN)</code></div>
+        <p class="symbols">FPR &mdash; false positive rate: the share of ordinary wines wrongly flagged as good</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import roc_curve, roc_auc_score
+
+proba = model.predict_proba(X_test)[:, 1]            # P(good)
+fpr, recall, thresholds = roc_curve(y_test, proba)
+roc_auc_score(y_test, proba)                         # 0.784</code></pre>
+      <div class="chart-wrap reveal" data-step="3" style="height:240px">
+        <canvas id="chartROC"></canvas>
+      </div>
+      <ul class="bullets">
+        <li class="reveal" data-step="4">A common mistake to avoid: passing <code>y_pred</code> instead of <code>proba</code>, because the ROC curve requires probability scores, not binary predictions.</li>
+        <li class="reveal" data-step="5">The dashed diagonal is the &ldquo;no skill&rdquo; baseline &mdash; 0.5 is the score you get by guessing at random. <span class="term">AUC</span> is the area under your curve: 1.0 is a perfect score.</li>
+        <li class="reveal" data-step="6">An AUC of 0.784: pick one &ldquo;good&rdquo; and one &ldquo;ordinary&rdquo; bottle of wine at random, and the model scores the good one higher 78.4% of the time.</li>
+      </ul>
+      <p class="closer reveal" data-step="7">0.784 looks respectable, but we need to be cautious about interpreting this metric on imbalanced data.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 13 · CLASS IMBALANCE ===================== -->
+  <section class="slide" data-nav="Imbalanced Classes">
+    <div class="inner">
+      <p class="movelabel">Imbalanced Classes</p>
+      <h1 class="title">All data scientists find imbalanced datasets challenging</h1>
+      <p class="lead">So they use an accuracy metric that considers both classes. Only 21.6% of the wine bottles are good. Two tools stop the majority class flattering the score.</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>Balanced accuracy = (Recall(-ve) + Recall(+ve)) / 2</code></div>
+        <p class="symbols">Recall(+ve) &mdash; recall on the positive class &middot; Recall(-ve) &mdash; recall on the negative class &middot; each class counts equally, whatever its size</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import accuracy_score, balanced_accuracy_score
+
+accuracy_score(y_test, y_pred)            # 0.807
+balanced_accuracy_score(y_test, y_pred)   # 0.620
+
+# The dummy classifier that always predicts the majority class scores 0.500</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="3">The drop from 0.807 &rarr; <strong>0.620</strong> is the overestimated accuracy that was given to the model.</li>
+      </ul>
+      <p class="lead reveal" data-step="4">We can now plot the precision-recall curve:</p>
+      <div class="chart-wrap reveal" data-step="5" style="height:230px">
+        <canvas id="chartPR"></canvas>
+      </div>
+      <ul class="bullets">
+        <li class="reveal" data-step="6">ROC&rsquo;s &ldquo;no skill&rdquo; line is the diagonal, and it uses the FPR. The precision-recall &ldquo;no skill&rdquo; line is the <strong>positive rate</strong> = the number of positive instances / total instances (0.216).</li>
+        <li class="reveal" data-step="7">The FPR divides by 3,838 ordinary wines, so a few hundred false positives barely move it. <span class="term">ROC overestimates a model whenever the negative class is disproportionately larger</span>. Precision divides by what was actually flagged, and cannot hide them.</li>
+      </ul>
+      <p class="closer reveal" data-step="8">Imbalanced data? Rare positives? Read the precision-recall curve.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 14 · MAE / RMSE ===================== -->
+  <section class="slide" data-nav="MAE MSE and RMSE">
+    <div class="inner">
+      <p class="movelabel">Let&rsquo;s add to our regression metrics</p>
+      <h1 class="title">MAE, MSE, and RMSE</h1>
+      <p class="lead">Let&rsquo;s try to predict the alcohol content of a wine. Same 4,898 bottles, new target: <code>alcohol</code>, a number from 8.0 to 14.0 % ABV.</p>
+      <p class="lead reveal" data-step="1">Nothing is right or wrong any more &mdash; only near or far (in terms of error). So we measure the size of the miss.</p>
+      <div class="reveal" data-step="2">
+        <div class="eq"><code>MAE = (1/n) &middot; &Sigma; |y&#7522; &minus; &#375;&#7522;|</code></div>
+        <p class="symbols">n number of observations &middot; y&#7522; actual value &middot; &#375;&#7522; predicted value</p>
+      </div>
+      <div class="reveal" data-step="3">
+        <div class="eq"><code>MSE = (1/n) &middot; &Sigma; (y&#7522; &minus; &#375;&#7522;)&sup2; &nbsp;&nbsp; RMSE = &radic;MSE</code></div>
+        <p class="symbols">the square punishes a big miss far harder than two small ones &middot; the root puts the answer back into target units (% ABV)</p>
+      </div>
+      <pre class="reveal" data-step="4"><code class="language-python">from sklearn.metrics import mean_absolute_error, root_mean_squared_error
+
+mean_absolute_error(y_test, y_pred)       # 0.292 % ABV  &middot; the typical miss
+root_mean_squared_error(y_test, y_pred)   # 0.382 % ABV  &middot; bigger. always.</code></pre>
+      <div class="chart-wrap reveal" data-step="5" style="height:200px">
+        <canvas id="chartOutlier"></canvas>
+      </div>
+      <ul class="bullets">
+        <li class="reveal" data-step="6">MAE rises steadily, in an almost straight line; RMSE takes off.</li>
+        <li class="reveal" data-step="7">So <strong>RMSE &gt; MAE, always</strong>. But an RMSE that dwarfs MAE diagnoses unevenly distributed errors: your predictions suffer from a few massive outliers rather than small, uniform misses. Here, 0.382 against 0.292 implies a minority of bottles are badly mispredicted.</li>
+      </ul>
+      <p class="closer reveal" data-step="8">Add this to what you learned on Monday.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 15 · R-SQUARED ===================== -->
+  <section class="slide" data-nav="R&sup2;">
+    <div class="inner">
+      <p class="movelabel">R&sup2;</p>
+      <h1 class="title">Compared To Just Guessing The Mean</h1>
+      <p class="lead">An error of 0.292 % ABV means nothing until you know what a thoughtless model would score.</p>
+      <div class="reveal" data-step="1">
+        <div class="eq"><code>R&sup2; = 1 &minus; (SSres / SStot)</code></div>
+        <p class="symbols">SSres sum of squared residuals, &Sigma; (y&#7522; &minus; &#375;&#7522;)&sup2; &middot; SStot total sum of squares, &Sigma; (y&#7522; &minus; &#563;)&sup2; where &#563; is the mean</p>
+      </div>
+      <pre class="reveal" data-step="2"><code class="language-python">from sklearn.metrics import r2_score
+
+r2_score(y_test, y_pred)   # 0.904
+# DummyRegressor(strategy="mean") scores -0.0 here, by construction</code></pre>
+      <div class="chart-wrap reveal" data-step="3" style="height:240px">
+        <canvas id="chartR2"></canvas>
+      </div>
+      <ul class="bullets">
+        <li class="reveal" data-step="4">R&sup2; is the variance the model explains that the mean does not. <strong>0.904</strong> is a seemingly good fit, but it needs adjusting.</li>
+        <li class="reveal" data-step="5">Always-guessing-the-mean scores <strong>0.0</strong> &mdash; not by luck, by definition. That is why <code>DummyRegressor</code> is the free baseline here.</li>
+        <li class="reveal" data-step="6">R&sup2; <em>can</em> go negative. That means the model did worse than the mean, and it is a real thing to see on test data. Any result is a good result.</li>
+      </ul>
+      <p class="closer reveal" data-step="7">Nine metrics, too many to choose from&hellip; so when do we use each one?</p>
+    </div>
+  </section>
+
+  <!-- ===================== 16 · CHOOSING ===================== -->
+  <section class="slide" data-nav="Choosing a Metric">
+    <div class="inner">
+      <p class="movelabel">Choosing a Metric</p>
+      <h1 class="title">There Is No Best Metric</h1>
+      <p class="lead">The right metric depends on your specific problem and the costs of different types of errors.</p>
+      <table class="minitable cases reveal" data-step="1">
+        <caption>Read the left column as a sentence about your problem</caption>
+        <tr><th>When&hellip;</th><th>reach for</th><th>because&hellip;</th></tr>
+        <tr><td>missing a positive is expensive</td><td>recall</td><td>Screening mammograms: a missed tumour costs a life, a false alarm costs one more scan. Recall counts the misses.</td></tr>
+        <tr><td>a false alarm is expensive</td><td>precision</td><td>A spam filter: junk in the inbox is a nuisance, a client&rsquo;s invoice in the spam folder is a lost contract. Precision counts the mistake.</td></tr>
+        <tr><td>you need one number, both matter</td><td>F1</td><td>Ranking five fraud models: A missed fraud and a frozen card both cost money, and F1 refuses to let a model win on one while failing the other.</td></tr>
+        <tr><td>comparing models, threshold not yet fixed</td><td>ROC AUC</td><td>Choosing a churn model before marketing has decided how many customers it can afford to call. AUC scores the ranking at every threshold, so the choice survives that decision.</td></tr>
+        <tr><td>positives are rare</td><td>precision-recall curve, balanced accuracy</td><td>Card fraud at 2 cases in 1,000: FPR divides by the huge negative class, so ROC looks superb whatever you do. Precision divides by what you flagged and cannot.</td></tr>
+        <tr><td>predicting a number, important outliers</td><td>RMSE</td><td>Forecasting electricity demand: one badly missed peak day blacks out a grid, and squaring the error is what makes the metric say so.</td></tr>
+        <tr><td>number prediction, unimportant outliers</td><td>MAE</td><td>Predicting a delivery time in minutes: 20 minutes out is exactly twice as annoying as 10, so the plain average miss is the honest number.</td></tr>
+      </table>
+      <p class="lead reveal" data-step="2">Two more regression metrics worth knowing and some tricks:</p>
+      <pre class="reveal" data-step="3"><code class="language-python">from sklearn.metrics import mean_absolute_percentage_error, median_absolute_error
+
+mean_absolute_percentage_error(y_test, y_pred)  # 0.028  &middot; MAPE: 2.8% off, unit-free
+median_absolute_error(y_test, y_pred)           # 0.243  &middot; vs MAE 0.292</code></pre>
+      <ul class="bullets">
+        <li class="reveal" data-step="4"><span class="term">MAPE</span> is a percentage, so it compares across targets on different scales. It explodes if any actual value is near zero.</li>
+        <li class="reveal" data-step="5"><span class="term">Median absolute error</span> ignores outliers completely. 0.243 &lt; 0.292 is the same warning RMSE conveys &mdash; a few rows are badly wrong.</li>
+        <li class="reveal" data-step="6">When the numbers disagree, plot the residuals with <code>PredictionErrorDisplay</code> and go look at the rows that failed.</li>
+      </ul>
+      <p class="closer reveal" data-step="7">Want everything? use <code>classification_report</code> or <code>regression_metrics</code>. But! Always pick the metric before you fit a model. Why?</p>
+    </div>
+  </section>
+
+  <!-- ===================== 17 · RECAP ===================== -->
+  <section class="slide" data-nav="Recap">
+    <div class="inner">
+      <p class="movelabel">Recap</p>
+      <h1 class="title">Nine Metrics, One Page</h1>
+      <p class="lead">Two kinds of problem, four counts, and every formula that falls out of them.</p>
+      <div class="diagram reveal" data-step="1">
+        <div class="dbox"><div class="t">Classification</div><div class="s">the target is a <em>category</em><br>a prediction is right or wrong</div></div>
+        <div class="vs">VS</div>
+        <div class="dbox"><div class="t">Regression</div><div class="s">the target is a <em>number</em><br>a prediction is near or far</div></div>
+      </div>
+      <table class="minitable cases reveal" data-step="2">
+        <caption>Classification &mdash; the confusion matrix, and the four counts every classification metric is built from</caption>
+        <tr><th></th><th>predicted negative</th><th>predicted positive</th></tr>
+        <tr><th>actually negative</th><td><strong>TN</strong> true negative &mdash; a correct all-clear</td><td><strong>FP</strong> false positive &mdash; a false alarm</td></tr>
+        <tr><th>actually positive</th><td><strong>FN</strong> false negative &mdash; a miss</td><td><strong>TP</strong> true positive &mdash; a catch</td></tr>
+      </table>
+      <table class="minitable cases reveal" data-step="3">
+        <caption>Six ways of dividing those four counts</caption>
+        <tr><th>Metric</th><th>Formula</th><th>What it says</th><th>Today</th></tr>
+        <tr><td>Accuracy</td><td><code>(TP + TN) / (TP + FP + TN + FN)</code></td><td>of all predictions, the share that were right</td><td>0.807</td></tr>
+        <tr><td>Recall</td><td><code>TP / (TP + FN)</code></td><td>of the real positives, the share we found</td><td>0.291</td></tr>
+        <tr><td>Precision</td><td><code>TP / (TP + FP)</code></td><td>of everything we flagged, the share that was right</td><td>0.616</td></tr>
+        <tr><td>F1</td><td><code>2 &middot; (Precision &middot; Recall) / (Precision + Recall)</code></td><td>the harmonic mean, pulled toward the weaker half</td><td>0.395</td></tr>
+        <tr><td>ROC AUC</td><td>area under recall plotted against <code>FPR = FP / (FP + TN)</code></td><td>the ranking, judged at every threshold at once</td><td>0.784</td></tr>
+        <tr><td>Balanced accuracy</td><td><code>(Recall&#8330; + Recall&#8331;) / 2</code></td><td>accuracy with each class weighted equally</td><td>0.620</td></tr>
+      </table>
+      <table class="minitable cases reveal" data-step="4">
+        <caption>Regression &mdash; nothing is right or wrong here, only near or far, so we measure the size of the miss</caption>
+        <tr><th>Metric</th><th>Formula</th><th>What it says</th><th>Today</th></tr>
+        <tr><td>MAE</td><td><code>(1/n) &middot; &Sigma; |y&#7522; &minus; &#375;&#7522;|</code></td><td>the typical miss, in the target&rsquo;s own units</td><td>0.292</td></tr>
+        <tr><td>MSE / RMSE</td><td><code>(1/n) &middot; &Sigma; (y&#7522; &minus; &#375;&#7522;)&sup2;</code> &middot; <code>RMSE = &radic;MSE</code></td><td>squares the miss, so a few big errors dominate</td><td>0.382</td></tr>
+        <tr><td>R&sup2;</td><td><code>1 &minus; (SSres / SStot)</code></td><td>the variance explained, versus always guessing the mean</td><td>0.904</td></tr>
+      </table>
+      <p class="symbols reveal" data-step="5">TP true positive &middot; TN true negative &middot; FP false positive &middot; FN false negative &middot; Recall&#8330; recall on the positive class &middot; Recall&#8331; recall on the negative class &middot; n number of observations &middot; y&#7522; actual value &middot; &#375;&#7522; predicted value &middot; SSres &Sigma; (y&#7522; &minus; &#375;&#7522;)&sup2; &middot; SStot &Sigma; (y&#7522; &minus; &#563;)&sup2;</p>
+      <p class="note reveal" data-step="6">None of those numbers means anything on its own. A <code>DummyClassifier</code> that ignores every feature scored <strong>0.784</strong> accuracy against our model&rsquo;s 0.807, and balanced accuracy <strong>0.500</strong>; <code>DummyRegressor</code> scores R&sup2; = 0.0 by construction. The <span class="term">threshold</span> is a dial, not a law &mdash; moving it from 0.50 to 0.25 bought recall 0.291 &rarr; 0.702 and sold precision 0.616 &rarr; 0.449.</p>
+      <p class="closer reveal" data-step="7">No metric is best. The right one is decided by what your model predicts and by the consequences of its mistakes.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 18 · CONSIDER THIS ===================== -->
+  <section class="slide" data-nav="Consider This">
+    <div class="inner">
+      <p class="movelabel">Consider This</p>
+      <h1 class="title">Six Situations, Six Different Answers</h1>
+      <p class="lead">Every one of these is a real machine learning problem, and every one needs a different metric.</p>
+      <p class="lead">Call out the metric you would put in front of the person paying for the model &mdash; and say what it would cost to get it wrong.</p>
+      <ul class="bullets action">
+        <li class="reveal" data-step="1"><strong>Hiring.</strong> A CV screener is 95% accurate, and 4% of applicants in the training dataset are qualified. What would &ldquo;reject everyone&rdquo; score? Which metric, and who pays for a false negative &mdash; the company, or the applicant who never hears back?</li>
+        <li class="reveal" data-step="2"><strong>Intensive care.</strong> A model flags patients developing sepsis. A miss can be fatal; a false alarm costs one more blood test. Which metric?</li>
+        <li class="reveal" data-step="3"><strong>Card fraud.</strong> A bank auto-blocks transactions it thinks are stolen. Two in a thousand really are, and a wrongly blocked card loses a customer. Which metric, and which of the two curves?</li>
+        <li class="reveal" data-step="4"><strong>Churn.</strong> Two models, and marketing has not yet decided how many customers it can afford to target. Which metric lets you pick a model before the threshold is chosen?</li>
+        <li class="reveal" data-step="5"><strong>House prices.</strong> A handful of mansions cost twenty times the median. Which metric and does your answer change if those mansions are the clients paying for the model?</li>
+        <li class="reveal" data-step="6"><strong>Delivery times.</strong> The app predicts arrival in minutes, and being 20 minutes out is exactly twice as annoying as 10. Which metric?</li>
+      </ul>
+      <p class="closer reveal" data-step="7">Somebody chose the metric on every dashboard you will ever be shown. Choosing it is a decision about people, not statistics.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 19 · GLOSSARY ===================== -->
+  <section class="slide" data-nav="Glossary">
+    <div class="inner">
+      <p class="movelabel">Glossary</p>
+      <h1 class="title">Look It Up</h1>
+      <div class="glossary">
+        <p><span class="term">Classification</span> &mdash; a task whose target is a category, so a prediction is simply right or wrong.</p>
+        <p><span class="term">Regression</span> &mdash; a task whose target is a number, so a prediction is near or far and the size of the miss is what we measure.</p>
+        <p><span class="term">Positive class</span> &mdash; the outcome you are trying to detect. Naming it is a modelling choice, and it decides what TP, FP and FN mean.</p>
+        <p><span class="term">Class imbalance</span> &mdash; one class far outnumbering the other, so a model can score well by ignoring the rare one.</p>
+        <p><span class="term">Confusion matrix</span> &mdash; the 2&times;2 table of TP, FP, TN, FN. In scikit-learn the truth runs down the side and the prediction across the top.</p>
+        <p><span class="term">True positive (TP)</span> &mdash; predicted positive, and it really was positive. A catch.</p>
+        <p><span class="term">False positive (FP)</span> &mdash; predicted positive, actually negative. A false alarm.</p>
+        <p><span class="term">True negative (TN)</span> &mdash; predicted negative, and it really was negative. A correct all-clear.</p>
+        <p><span class="term">False negative (FN)</span> &mdash; predicted negative, actually positive. A miss.</p>
+        <p><span class="term">Accuracy</span> &mdash; of all predictions, the share that were right.</p>
+        <p><span class="term">Accuracy paradox</span> &mdash; when one class dominates, accuracy mostly measures the class balance rather than the model.</p>
+        <p><span class="term">Baseline</span> &mdash; the dumbest defensible model, fitted first, so a score has something to beat.</p>
+        <p><span class="term">Recall</span> &mdash; of the real positives, the share found. Also called sensitivity, or the true positive rate.</p>
+        <p><span class="term">Precision</span> &mdash; of everything flagged positive, the share that really was.</p>
+        <p><span class="term">Decision threshold</span> &mdash; the probability cut-off, 0.50 by default, that turns a predicted score into a predicted class.</p>
+        <p><span class="term">F1-score</span> &mdash; the harmonic mean of precision and recall.</p>
+        <p><span class="term">Harmonic mean</span> &mdash; an average pulled toward the smaller value, so one weak half cannot hide behind a strong one.</p>
+        <p><span class="term">ROC curve</span> &mdash; recall against false positive rate, traced across every threshold.</p>
+        <p><span class="term">False positive rate (FPR)</span> &mdash; of the real negatives, the share wrongly flagged positive.</p>
+        <p><span class="term">ROC AUC</span> &mdash; area under the ROC curve. 0.5 is guessing, 1.0 is perfect.</p>
+        <p><span class="term">Balanced accuracy</span> &mdash; the mean of the per-class recalls, so each class counts equally whatever its size.</p>
+        <p><span class="term">Precision-recall curve</span> &mdash; precision against recall; the honest curve when positives are rare.</p>
+        <p><span class="term">Positive rate</span> &mdash; the share of all observations that are positive. It is the no-skill line of a precision-recall curve.</p>
+        <p><span class="term">MAE</span> &mdash; mean absolute error, the typical miss, in the target&rsquo;s own units.</p>
+        <p><span class="term">MSE</span> &mdash; mean squared error; squares the miss, so big errors dominate.</p>
+        <p><span class="term">RMSE</span> &mdash; the root of MSE, back in the target&rsquo;s units. Always at least MAE.</p>
+        <p><span class="term">R&sup2;</span> &mdash; the share of variance explained versus always guessing the mean. 0 is the mean, negative is worse.</p>
+        <p><span class="term">MAPE</span> &mdash; mean absolute percentage error; unit-free, but unstable when any actual value is near zero.</p>
+        <p><span class="term">Median absolute error</span> &mdash; the middle miss; ignores outliers entirely.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 20 · QUIZ ===================== -->
+  <section class="slide" data-nav="Quick Quiz">
+    <div class="inner">
+      <p class="movelabel">Quick Quiz</p>
+      <h1 class="title">Quick Quiz</h1>
+      <div class="quiz" id="quiz">
+
+        <div class="q" data-topic="The Confusion Matrix">
+          <p class="qq">1. A bottle was actually good, and the model predicted ordinary. Which cell does it land in?</p>
+          <div class="opts">
+            <button class="opt">False positive</button>
+            <button class="opt" data-correct="true">False negative</button>
+            <button class="opt">True negative</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="Accuracy Lies">
+          <p class="qq">2. Your classifier scores 0.807 accuracy on data where 78.4% of bottles are ordinary. What have you learned?</p>
+          <div class="opts">
+            <button class="opt" data-correct="true">Very little &mdash; most of that score comes from the majority class, so you need to see recall and a baseline</button>
+            <button class="opt">The model is strong and ready to use</button>
+            <button class="opt">Accuracy is invalid for classification and should never be reported</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="Recall">
+          <p class="qq">3. You are picking bottles for a premium line. Missing a genuinely good one costs far more than occasionally shipping an ordinary one. Which metric do you optimise?</p>
+          <div class="opts">
+            <button class="opt">Precision &mdash; you must not ship a bad bottle</button>
+            <button class="opt">Accuracy &mdash; it balances both errors</button>
+            <button class="opt" data-correct="true">Recall &mdash; a missed good bottle is the expensive error</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="F1-score">
+          <p class="qq">4. Precision is 0.616 and recall 0.291, yet F1 is 0.395 rather than their average of 0.454. Why?</p>
+          <div class="opts">
+            <button class="opt">F1 weights precision more heavily than recall</button>
+            <button class="opt" data-correct="true">It is the harmonic mean, which is pulled toward the smaller of the two</button>
+            <button class="opt">F1 subtracts a penalty for class imbalance</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="ROC and AUC">
+          <p class="qq">5. Why compare two classifiers on ROC AUC instead of their accuracy at a 0.50 threshold?</p>
+          <div class="opts">
+            <button class="opt" data-correct="true">AUC judges the ranking across every threshold, so the comparison does not depend on a cut-off you have not chosen yet</button>
+            <button class="opt">AUC is unaffected by class imbalance, unlike every other metric</button>
+            <button class="opt">AUC is simply accuracy computed on probabilities instead of labels</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="MAE and RMSE">
+          <p class="qq">6. Your regression reports MAE 0.292 and RMSE 0.382. What does the gap tell you?</p>
+          <div class="opts">
+            <button class="opt">The two were computed on different test sets</button>
+            <button class="opt">Nothing &mdash; RMSE is always about 30% above MAE</button>
+            <button class="opt" data-correct="true">A minority of bottles have unusually large errors, and squaring makes them dominate RMSE</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="Accuracy Lies">
+          <p class="qq">7. A <code>DummyClassifier</code> using the most frequent class scores 0.784; your model scores 0.807. What is the right conclusion?</p>
+          <div class="opts">
+            <button class="opt" data-correct="true">Eleven features bought 2.3 points over guessing &mdash; investigate before claiming the model works</button>
+            <button class="opt">The model is overfitting and needs regularisation</button>
+            <button class="opt">The baseline is broken; a dummy model should score near zero</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="When Classes Are Skewed">
+          <p class="qq">8. Accuracy is 0.807 but balanced accuracy is 0.620. What does that gap mean?</p>
+          <div class="opts">
+            <button class="opt">The model is underfitting and needs more features</button>
+            <button class="opt" data-correct="true">It performs far better on the majority class than on the minority one</button>
+            <button class="opt">Balanced accuracy is always lower, so the gap carries no information</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="When Classes Are Skewed">
+          <p class="qq">9. Only 21.6% of your bottles are positive. Which curve gives the more honest picture?</p>
+          <div class="opts">
+            <button class="opt">The ROC curve, because it is independent of the threshold</button>
+            <button class="opt">Either &mdash; they contain exactly the same information</button>
+            <button class="opt" data-correct="true">The precision-recall curve &mdash; with a large negative class, FPR stays small whatever the model does, so ROC flatters it</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+        <div class="q" data-topic="Choosing a Metric">
+          <p class="qq">10. MAE is 0.292 but median absolute error is 0.243. What should you do?</p>
+          <div class="opts">
+            <button class="opt">Report the median, since it is the smaller and therefore better number</button>
+            <button class="opt" data-correct="true">Investigate &mdash; a few large errors are pulling the mean up, so go and look at which bottles the model fails on</button>
+            <button class="opt">Nothing; the mean and median of any error distribution always differ</button>
+          </div>
+          <p class="fb"></p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 21 · CLOSING ===================== -->
+  <section class="slide" data-nav="Now on to you!">
+    <div class="inner">
+      <p class="movelabel">Now on to you!</p>
+      <h1 class="title">Prove The Formulas Yourself</h1>
+      <p class="lead">You have seen every metric called from sklearn. Now write them, and check that your numbers match.</p>
+      <ul class="bullets action">
+        <li class="reveal" data-step="1">Start with the <strong>confusion-matrix quick demo</strong> &mdash; ten predictions, by hand, until all four cells are obvious.</li>
+        <li class="reveal" data-step="2">Then the <strong>classification-metrics notebook</strong>: implement accuracy, recall, precision and F1 from scratch and assert them against sklearn.</li>
+        <li class="reveal" data-step="3">Do the same in the <strong>regression-metrics notebook</strong> for MAE, MSE and R&sup2;.</li>
+        <li class="reveal" data-step="4">Finish with the <strong>baseline-models walkthrough</strong> &mdash; make fitting a dummy the reflex before any real model.</li>
+      </ul>
+      <p class="closer reveal" data-step="5">If your function and sklearn disagree, you have found the thing you did not actually understand. That is the point.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+<div class="hint">&rarr; / Space: next &middot; &larr; : back</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var progress = document.getElementById('progress');
+  var counter = document.getElementById('counter');
+  var sidebar = document.getElementById('sidebar');
+  var current = 0;   // active slide index
+  var step = 0;      // reveals shown on the active slide
+  var seen = slides.map(function(){ return false; });  // slides fully viewed at least once
+
+  // build sidebar from each slide's data-nav (the orange topic)
+  var navItems = slides.map(function(s, idx){
+    var b = document.createElement('button');
+    b.className = 'navitem';
+    b.innerHTML = '<span class="dot"></span><span>' + (s.getAttribute('data-nav') || ('Slide ' + (idx+1))) + '</span>';
+    b.addEventListener('click', function(){ showSlide(idx); });
+    sidebar.appendChild(b);
+    return b;
+  });
+
+  function revealsOf(slide){
+    var nodes = Array.prototype.slice.call(slide.querySelectorAll('.reveal'));
+    nodes.sort(function(a,b){
+      return (parseInt(a.getAttribute('data-step'),10)||0) - (parseInt(b.getAttribute('data-step'),10)||0);
+    });
+    return nodes;
+  }
+
+  function renderChrome(){
+    counter.textContent = (current+1) + ' / ' + slides.length;
+    progress.style.width = ((current+1)/slides.length*100) + '%';
+    navItems.forEach(function(it, idx){
+      it.classList.toggle('active', idx===current);
+      it.classList.toggle('done', idx<current);
+    });
+    if(navItems[current]){ navItems[current].scrollIntoView({block:'nearest'}); }
+  }
+
+  function markSeen(){
+    if(step >= revealsOf(slides[current]).length){ seen[current] = true; }
+  }
+
+  // A slide that has been fully revealed once is "seen": on return it shows
+  // everything at once. A slide not yet seen plays its reveals step by step.
+  function showSlide(i){
+    current = Math.max(0, Math.min(slides.length-1, i));
+    slides.forEach(function(s,idx){ s.classList.toggle('active', idx===current); });
+    slides[current].scrollTop = 0;
+    var reveals = revealsOf(slides[current]);
+    if(seen[current]){
+      reveals.forEach(function(n){ n.classList.add('shown'); });
+      step = reveals.length;
+    }else{
+      reveals.forEach(function(n){ n.classList.remove('shown'); });
+      step = 0;
+    }
+    markSeen();   // static slides (no reveals) count as seen on entry
+    renderChrome();
+  }
+
+  function advance(){
+    var reveals = revealsOf(slides[current]);
+    if(step < reveals.length){
+      reveals[step].classList.add('shown');
+      step++;
+      markSeen();
+    }else if(current < slides.length-1){
+      showSlide(current+1);
+    }
+  }
+
+  function back(){
+    // first pass: collapse reveals one at a time;
+    // once a slide is fully seen, ← jumps to the previous slide
+    var reveals = revealsOf(slides[current]);
+    if(step > 0 && !seen[current]){
+      step--;
+      reveals[step].classList.remove('shown');
+    }else if(current > 0){
+      showSlide(current-1);
+    }
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key===' '||e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){
+      e.preventDefault(); advance();
+    }else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){
+      e.preventDefault(); back();
+    }else if(e.key==='Home'){ e.preventDefault(); showSlide(0); }
+    else if(e.key==='End'){ e.preventDefault(); showSlide(slides.length-1); }
+  });
+
+  document.getElementById('deck').addEventListener('click', function(){ advance(); });
+
+  function initQuiz(){
+    var quiz = document.getElementById('quiz');
+    if(!quiz) return;
+    quiz.addEventListener('click', function(e){ e.stopPropagation(); }); // answering must not advance the slide
+    Array.prototype.forEach.call(quiz.querySelectorAll('.q'), function(q){
+      var fb = q.querySelector('.fb');
+      var opts = Array.prototype.slice.call(q.querySelectorAll('.opt'));
+      opts.forEach(function(opt){
+        opt.addEventListener('click', function(){
+          if(q.getAttribute('data-answered')) return;
+          q.setAttribute('data-answered','1');
+          var correct = opt.getAttribute('data-correct')==='true';
+          opts.forEach(function(o){
+            if(o.getAttribute('data-correct')==='true') o.classList.add('correct');
+          });
+          if(!correct) opt.classList.add('wrong');
+          if(correct){
+            fb.textContent = 'Correct.';
+          }else{
+            var topic = q.getAttribute('data-topic');
+            fb.textContent = topic ? ('Not quite. Revisit "' + topic + '" in the sidebar.') : 'Not quite.';
+          }
+        });
+      });
+    });
+  }
+  initQuiz();
+
+  showSlide(0);
+})();
+</script>
+<script>
+/*
+  ══════════════════════════════════════════════════════════════════
+  Chart data computed from ds-evaluation-metrics/data/wine-quality.csv
+  Classification: y = quality >= 7, StandardScaler + LogisticRegression
+                  (max_iter=1000), test_size=0.25, random_state=42, stratify=y
+  Regression:     y = alcohol, LinearRegression, random_state=42
+  ══════════════════════════════════════════════════════════════════
+*/
+var ORANGE = '#F5821F', BLUE = '#2d6a9f', MUTED = '#7a7a7a';
+
+var SWEEP_P = [{x:0.05,y:0.247},{x:0.1,y:0.297},{x:0.15,y:0.35},{x:0.2,y:0.402},{x:0.25,y:0.449},{x:0.3,y:0.481},{x:0.35,y:0.521},{x:0.4,y:0.576},{x:0.45,y:0.622},{x:0.5,y:0.616},{x:0.55,y:0.667},{x:0.6,y:0.78},{x:0.65,y:0.75},{x:0.7,y:0.737},{x:0.75,y:0.714}];
+var SWEEP_R = [{x:0.05,y:0.958},{x:0.1,y:0.883},{x:0.15,y:0.834},{x:0.2,y:0.785},{x:0.25,y:0.702},{x:0.3,y:0.585},{x:0.35,y:0.513},{x:0.4,y:0.445},{x:0.45,y:0.385},{x:0.5,y:0.291},{x:0.55,y:0.226},{x:0.6,y:0.174},{x:0.65,y:0.102},{x:0.7,y:0.053},{x:0.75,y:0.019}];
+
+var ROC = [{x:0.0,y:0.0},{x:0.007,y:0.068},{x:0.017,y:0.185},{x:0.033,y:0.23},{x:0.05,y:0.291},{x:0.061,y:0.347},{x:0.071,y:0.408},{x:0.095,y:0.449},{x:0.124,y:0.502},{x:0.143,y:0.54},{x:0.164,y:0.57},{x:0.196,y:0.615},{x:0.229,y:0.657},{x:0.24,y:0.717},{x:0.292,y:0.751},{x:0.322,y:0.781},{x:0.376,y:0.808},{x:0.432,y:0.834},{x:0.498,y:0.86},{x:0.545,y:0.872},{x:0.616,y:0.894},{x:0.707,y:0.902},{x:0.773,y:0.943},{x:0.848,y:0.962},{x:1.0,y:1.0}];
+
+var PR = [{x:0.0,y:1.0},{x:0.147,y:0.765},{x:0.238,y:0.618},{x:0.351,y:0.612},{x:0.445,y:0.581},{x:0.506,y:0.53},{x:0.558,y:0.488},{x:0.619,y:0.465},{x:0.683,y:0.448},{x:0.74,y:0.432},{x:0.77,y:0.404},{x:0.796,y:0.38},{x:0.823,y:0.36},{x:0.838,y:0.338},{x:0.86,y:0.323},{x:0.872,y:0.304},{x:0.891,y:0.291},{x:0.894,y:0.275},{x:0.898,y:0.26},{x:0.94,y:0.257},{x:0.958,y:0.249},{x:0.97,y:0.239},{x:0.996,y:0.234},{x:1.0,y:0.216}];
+var PR_NOSKILL = [{x:0,y:0.216},{x:1,y:0.216}];
+
+var OUT_MAE  = [{x:0.0,y:0.207},{x:0.5,y:0.253},{x:1.0,y:0.298},{x:1.5,y:0.344},{x:2.0,y:0.389},{x:2.5,y:0.435},{x:3.0,y:0.48},{x:3.5,y:0.525},{x:4.0,y:0.571},{x:4.5,y:0.616},{x:5.0,y:0.662},{x:5.5,y:0.707},{x:6.0,y:0.753}];
+var OUT_RMSE = [{x:0.0,y:0.222},{x:0.5,y:0.269},{x:1.0,y:0.375},{x:1.5,y:0.504},{x:2.0,y:0.643},{x:2.5,y:0.786},{x:3.0,y:0.931},{x:3.5,y:1.078},{x:4.0,y:1.226},{x:4.5,y:1.375},{x:5.0,y:1.524},{x:5.5,y:1.673},{x:6.0,y:1.823}];
+
+var R2PTS = [{x:10.1,y:10.6},{x:12.0,y:11.87},{x:10.4,y:10.54},{x:12.0,y:11.71},{x:11.0,y:11.49},{x:8.8,y:9.11},{x:10.7,y:9.73},{x:9.8,y:9.75},{x:10.9,y:11.25},{x:10.6,y:10.69},{x:10.6,y:10.78},{x:9.6,y:9.81},{x:9.3,y:9.5},{x:12.8,y:13.1},{x:11.0,y:10.56},{x:9.3,y:9.38},{x:9.9,y:10.34},{x:10.7,y:11.04},{x:12.2,y:12.37},{x:11.0,y:11.84},{x:9.4,y:9.57},{x:10.2,y:10.11},{x:9.4,y:9.56},{x:9.2,y:9.19},{x:8.9,y:8.87},{x:10.1,y:10.49},{x:11.1,y:11.18},{x:9.5,y:9.76},{x:9.8,y:9.4},{x:10.2,y:10.97},{x:9.2,y:9.6},{x:9.6,y:9.66},{x:9.0,y:9.36},{x:11.7,y:11.21},{x:12.4,y:11.75},{x:11.2,y:11.3},{x:11.4,y:11.73},{x:12.2,y:12.28},{x:12.8,y:12.66},{x:12.4,y:12.14}];
+
+function axes(xl, yl, xmax, ymax){
+  return {
+    x:{ type:'linear', min:0, max:xmax,
+        title:{ display:true, text:xl, font:{ size:12 } }, ticks:{ font:{ size:11 } } },
+    y:{ min:0, max:ymax,
+        title:{ display:true, text:yl, font:{ size:12 } }, ticks:{ font:{ size:11 } } }
+  };
+}
+var LEG = { legend:{ labels:{ font:{ size:11 } } } };
+
+new Chart(document.getElementById('chartThreshold'), {
+  type:'line',
+  data:{ datasets:[
+    { label:'Precision', data:SWEEP_P, borderColor:ORANGE, backgroundColor:ORANGE, pointRadius:0, borderWidth:2.5, tension:0.15 },
+    { label:'Recall',    data:SWEEP_R, borderColor:BLUE,   backgroundColor:BLUE,   pointRadius:0, borderWidth:2.5, tension:0.15 }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:LEG,
+    scales:{ x:{ type:'linear', min:0.05, max:0.75,
+                 title:{ display:true, text:'Decision threshold', font:{ size:12 } }, ticks:{ font:{ size:11 } } },
+             y:{ min:0, max:1, title:{ display:true, text:'Score', font:{ size:12 } }, ticks:{ font:{ size:11 } } } } }
+});
+
+new Chart(document.getElementById('chartROC'), {
+  type:'line',
+  data:{ datasets:[
+    { label:'Our model (AUC 0.784)', data:ROC, borderColor:ORANGE, backgroundColor:ORANGE, pointRadius:0, borderWidth:2.5, tension:0.15 },
+    { label:'Random guess (AUC 0.5)', data:[{x:0,y:0},{x:1,y:1}], borderColor:MUTED, borderDash:[6,4], pointRadius:0, borderWidth:1.5 }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:LEG,
+    scales:axes('False Positive Rate', 'Recall (True Positive Rate)', 1, 1) }
+});
+
+new Chart(document.getElementById('chartPR'), {
+  type:'line',
+  data:{ datasets:[
+    { label:'Our model', data:PR, borderColor:ORANGE, backgroundColor:ORANGE, pointRadius:0, borderWidth:2.5, tension:0.15 },
+    { label:'No skill (positive rate 0.216)', data:PR_NOSKILL, borderColor:MUTED, borderDash:[6,4], pointRadius:0, borderWidth:1.5 }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:LEG,
+    scales:axes('Recall', 'Precision', 1, 1) }
+});
+
+new Chart(document.getElementById('chartOutlier'), {
+  type:'line',
+  data:{ datasets:[
+    { label:'RMSE', data:OUT_RMSE, borderColor:ORANGE, backgroundColor:ORANGE, pointRadius:0, borderWidth:2.5, tension:0.15 },
+    { label:'MAE',  data:OUT_MAE,  borderColor:BLUE,   backgroundColor:BLUE,   pointRadius:0, borderWidth:2.5, tension:0.15 }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:LEG,
+    scales:{ x:{ type:'linear', min:0, max:6,
+                 title:{ display:true, text:'Size of one outlying error', font:{ size:12 } }, ticks:{ font:{ size:11 } } },
+             y:{ min:0, max:2, title:{ display:true, text:'Reported error', font:{ size:12 } }, ticks:{ font:{ size:11 } } } } }
+});
+
+new Chart(document.getElementById('chartR2'), {
+  type:'scatter',
+  data:{ datasets:[
+    { label:'Test-set bottles', data:R2PTS, borderColor:ORANGE, backgroundColor:ORANGE, pointRadius:4 },
+    { label:'Perfect prediction', type:'line', data:[{x:8,y:8},{x:14,y:14}], borderColor:MUTED, borderDash:[6,4], pointRadius:0, borderWidth:1.5 }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:LEG,
+    scales:{ x:{ type:'linear', min:8, max:14,
+                 title:{ display:true, text:'Actual alcohol (% ABV)', font:{ size:12 } }, ticks:{ font:{ size:11 } } },
+             y:{ min:8, max:14,
+                 title:{ display:true, text:'Predicted alcohol (% ABV)', font:{ size:12 } }, ticks:{ font:{ size:11 } } } } }
+});
+</script>
+</body>
+</html>
